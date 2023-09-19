@@ -1,6 +1,6 @@
 use rayon::prelude::*;
 use std::sync::{Arc, Mutex};
-use std::{fs, io};
+use std::{fs};
 use wordle::*;
 
 fn main() {
@@ -26,8 +26,8 @@ fn main() {
         let mask = make_mask(buffer.trim());
         buffer.clear();
 
-        mask_answers(mask, &guess.trim(), &mut guesses);
-        mask_answers(mask, &guess.trim(), &mut answers);
+        mask_answers(mask, guess.trim(), &mut guesses);
+        mask_answers(mask, guess.trim(), &mut answers);
     }
 
     contents.par_iter().for_each(|word| {
@@ -40,9 +40,9 @@ fn main() {
             wins[0] += 1;
             return;
         }
-        let mask = play_mask(&guess, word);
-        mask_answers(mask, &guess.trim(), &mut guesses);
-        mask_answers(mask, &guess.trim(), &mut answers);
+        let mask = play_mask(guess, word);
+        mask_answers(mask, guess.trim(), &mut guesses);
+        mask_answers(mask, guess.trim(), &mut answers);
         for i in 1..6 {
             let (guess, _entropy) = calc_probs(&guesses, &answers);
             if guess == *word {
@@ -51,8 +51,8 @@ fn main() {
                 return;
             }
             let mask = play_mask(&guess, word);
-            mask_answers(mask, &guess.trim(), &mut answers);
-            mask_answers(mask, &guess.trim(), &mut guesses);
+            mask_answers(mask, guess.trim(), &mut answers);
+            mask_answers(mask, guess.trim(), &mut guesses);
         }
         let mut wins = wins.lock().unwrap();
         wins[6] += 1;

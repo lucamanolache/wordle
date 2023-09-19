@@ -14,7 +14,7 @@ pub fn _calc_probs(guesses: &Vec<&str>, answers: &Vec<&str>) -> (String, f32) {
                 .collect();
             for res in reses.iter() {
                 // increase the amount of times we have seen this pattern
-                gmap.insert(*res, gmap.get(&res).unwrap_or(&0) + 1);
+                gmap.insert(*res, gmap.get(res).unwrap_or(&0) + 1);
             }
             (guess, gmap)
         })
@@ -39,7 +39,7 @@ pub fn _calc_probs(guesses: &Vec<&str>, answers: &Vec<&str>) -> (String, f32) {
         .par_iter()
         .map(|(word, map)| -> (&str, f32) {
             let mut expected_information = 0.0;
-            for (pattern, times) in map {
+            for (pattern, times) in map.iter() {
                 // our expected information increases by the information of the
                 // pattern * the chance we think of seeing that pattern
                 expected_information += informations.get(pattern).unwrap_or(&0.0)
@@ -72,7 +72,7 @@ pub fn calc_probs(guesses: &Vec<&str>, answers: &Vec<&str>) -> (String, f32) {
                 .collect();
             for res in reses.iter() {
                 // increase the amount of times we have seen this pattern
-                gmap.insert(*res, gmap.get(&res).unwrap_or(&0) + 1);
+                gmap.insert(*res, gmap.get(res).unwrap_or(&0) + 1);
             }
             (guess, gmap)
         })
@@ -82,7 +82,7 @@ pub fn calc_probs(guesses: &Vec<&str>, answers: &Vec<&str>) -> (String, f32) {
         .par_iter()
         .map(|(word, map)| -> (&str, f32) {
             let mut expected_information = 0.0;
-            for (_pattern, times) in map {
+            for times in map.values() {
                 // our expected information increases by the information of the
                 // pattern * the chance we think of seeing that pattern
                 let p = *times as f32 / answers.len() as f32;
@@ -121,7 +121,7 @@ fn gen_mask(guess: &str, ans: &str) -> u32 {
         } else {
             // lets see if its yellow
             if chars[*gc as usize - 97] > 0 {
-                res += 1 * 3u32.pow(i as u32);
+                res += 3u32.pow(i as u32);
                 chars[*gc as usize - 97] -= 1;
             }
         }
@@ -154,7 +154,7 @@ pub fn mask_answers(mask: u32, guess: &str, answers: &mut Vec<&str>) {
             } else {
                 // lets see if its yellow
                 if chars[*gc as usize - 97] > 0 {
-                    res += 1 * 3u32.pow(i as u32);
+                    res += 3u32.pow(i as u32);
                     chars[*gc as usize - 97] -= 1;
                 }
             }
@@ -166,7 +166,7 @@ pub fn mask_answers(mask: u32, guess: &str, answers: &mut Vec<&str>) {
     }
 }
 
-fn sanity(mask: u32, guess: &str, ans: &str) -> u32 {
+fn _sanity(mask: u32, guess: &str, ans: &str) -> u32 {
     let mut res = 0;
     let mut chars = [0; 26];
     for c in ans.as_bytes() {
@@ -187,7 +187,7 @@ fn sanity(mask: u32, guess: &str, ans: &str) -> u32 {
             // lets see if its yellow
             if chars[*gc as usize - 97] > 0 {
                 print!("🟨 ");
-                res += 1 * 3u32.pow(i as u32);
+                res += 3u32.pow(i as u32);
                 chars[*gc as usize - 97] -= 1;
             } else {
                 print!("⬜ ");
@@ -219,7 +219,7 @@ pub fn make_mask(inp: &str) -> u32 {
             print!("🟩 ");
         }
     }
-    println!("");
+    println!();
     ret
 }
 
@@ -242,7 +242,7 @@ pub fn play_mask(guess: &str, ans: &str) -> u32 {
         } else {
             // lets see if its yellow
             if chars[*gc as usize - 97] > 0 {
-                res += 1 * 3u32.pow(i as u32);
+                res += 3u32.pow(i as u32);
                 chars[*gc as usize - 97] -= 1;
             }
         }
