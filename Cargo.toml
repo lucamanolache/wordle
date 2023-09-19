@@ -3,6 +3,23 @@ name = "wordle"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+name = "wordle"
+path = "src/lib.rs"
+
+[[bin]]
+name = "wordle-bin"
+path = "src/main.rs"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+chrono = "0.4"
+rayon = "1.7.0"
+
+[dev-dependencies]
+criterion = "0.3"
+
+[[bench]]
+name = "bench"
+harness = false
