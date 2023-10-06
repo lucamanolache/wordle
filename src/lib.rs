@@ -1,12 +1,12 @@
 use rayon::prelude::*;
 use std::collections::HashMap;
 
-pub fn _calc_probs(guesses: &Vec<&str>, answers: &Vec<&str>) -> (String, f32) {
+pub fn calc_probs(guesses: &Vec<[u8; 5]>, answers: &Vec<[u8; 5]>) -> ([u8; 5], f32) {
     // map of each guess to how many times it gets each key.
     // so bmap['soare'] = { 20002: 5, 10001: 3, ... }
-    let bmap: HashMap<&str, HashMap<u32, u32>> = guesses
+    let bmap: Vec<HashMap<u32, u32>> = guesses
         .par_iter()
-        .map(|guess| -> (&str, HashMap<u32, u32>) {
+        .map(|guess| -> HashMap<u32, u32> {
             let mut gmap: HashMap<u32, u32> = HashMap::new();
             let reses: Vec<u32> = answers
                 .par_iter()
@@ -16,71 +16,13 @@ pub fn _calc_probs(guesses: &Vec<&str>, answers: &Vec<&str>) -> (String, f32) {
                 // increase the amount of times we have seen this pattern
                 gmap.insert(*res, gmap.get(res).unwrap_or(&0) + 1);
             }
-            (guess, gmap)
-        })
-        .collect();
-    // information's stores how much information each pattern gives us. that is
-    // calculated by - log prob of seeing that pattern
-    let totals = guesses.len() * answers.len();
-    let mut informations: HashMap<u32, f32> = HashMap::new();
-    bmap.iter().for_each(|(_, m)| {
-        m.iter().for_each(|(key, times)| {
-            informations.insert(*key, *informations.get(key).unwrap_or(&0.0) + *times as f32);
-        })
-    });
-
-    let informations: HashMap<u32, f32> = informations
-        .par_iter()
-        .map(|(k, v)| -> (u32, f32) { (*k, -(*v / totals as f32).log2()) })
-        .collect();
-    // now that we have the information of each pattern, calculate the expected
-    // information of each word
-    let bmap: Vec<(&str, f32)> = bmap
-        .par_iter()
-        .map(|(word, map)| -> (&str, f32) {
-            let mut expected_information = 0.0;
-            for (pattern, times) in map.iter() {
-                // our expected information increases by the information of the
-                // pattern * the chance we think of seeing that pattern
-                expected_information += informations.get(pattern).unwrap_or(&0.0)
-                    * (*times as f32 / answers.len() as f32);
-            }
-            (word, expected_information)
-        })
-        .collect();
-    let (mut best, mut guess) = (0.0, "ERROR???");
-    for (key, map) in bmap.iter() {
-        // so total is just gonna be how many possible answers there are
-        if *map > best {
-            best = *map;
-            guess = key;
-        }
-    }
-    (guess.to_owned(), best)
-}
-
-pub fn calc_probs(guesses: &Vec<&str>, answers: &Vec<&str>) -> (String, f32) {
-    // map of each guess to how many times it gets each key.
-    // so bmap['soare'] = { 20002: 5, 10001: 3, ... }
-    let bmap: HashMap<&str, HashMap<u32, u32>> = guesses
-        .par_iter()
-        .map(|guess| -> (&str, HashMap<u32, u32>) {
-            let mut gmap: HashMap<u32, u32> = HashMap::new();
-            let reses: Vec<u32> = answers
-                .par_iter()
-                .map(|x| -> u32 { gen_mask(guess, x) })
-                .collect();
-            for res in reses.iter() {
-                // increase the amount of times we have seen this pattern
-                gmap.insert(*res, gmap.get(res).unwrap_or(&0) + 1);
-            }
-            (guess, gmap)
+            gmap
         })
         .collect();
     // calculate the expected information of each word
-    let bmap: Vec<(&str, f32)> = bmap
+    let bmap: Vec<f32> = bmap
         .par_iter()
-        .map(|(word, map)| -> (&str, f32) {
+        .map(|map| -> f32 {
             let mut expected_information = 0.0;
             for times in map.values() {
                 // our expected information increases by the information of the
@@ -88,32 +30,27 @@ pub fn calc_probs(guesses: &Vec<&str>, answers: &Vec<&str>) -> (String, f32) {
                 let p = *times as f32 / answers.len() as f32;
                 expected_information += p * -p.log2();
             }
-            (word, expected_information)
+            expected_information
         })
         .collect();
-    let (mut best, mut guess) = (0.0, "ERROR???");
-    for (key, map) in bmap.iter() {
+    let (mut best, mut idx) = (0.0, 0);
+    for (i, info) in bmap.iter().enumerate() {
         // so total is just gonna be how many possible answers there are
-        if *map > best {
-            best = *map;
-            guess = key;
+        if *info > best {
+            best = *info;
+            idx = i;
         }
     }
-    (guess.to_owned(), best)
+    (guesses[idx].clone(), best)
 }
 
-fn gen_mask(guess: &str, ans: &str) -> u32 {
+fn gen_mask(guess: &[u8; 5], ans: &[u8; 5]) -> u32 {
     let mut res = 0;
     let mut chars = [0; 26];
-    for c in ans.as_bytes() {
+    for c in ans {
         chars[(c - 97) as usize] += 1;
     }
-    for (i, (gc, ac)) in guess
-        .as_bytes()
-        .iter()
-        .zip(ans.as_bytes().iter())
-        .enumerate()
-    {
+    for (i, (gc, ac)) in guess.iter().zip(ans.iter()).enumerate() {
         if gc == ac {
             // its green
             res += 2 * 3u32.pow(i as u32);
@@ -130,7 +67,7 @@ fn gen_mask(guess: &str, ans: &str) -> u32 {
     res
 }
 
-pub fn mask_answers(mask: u32, guess: &str, answers: &mut Vec<&str>) {
+pub fn mask_answers(mask: u32, guess: &[u8; 5], answers: &mut Vec<[u8; 5]>) {
     for i in (0..answers.len() - 1).rev() {
         let ans = answers[i];
         if ans.len() != 5 {
@@ -138,15 +75,10 @@ pub fn mask_answers(mask: u32, guess: &str, answers: &mut Vec<&str>) {
         }
         let mut res = 0;
         let mut chars = [0; 26];
-        for c in ans.as_bytes() {
+        for c in ans {
             chars[(c - 97) as usize] += 1;
         }
-        for (i, (gc, ac)) in guess
-            .as_bytes()
-            .iter()
-            .zip(ans.as_bytes().iter())
-            .enumerate()
-        {
+        for (i, (gc, ac)) in guess.iter().zip(ans.iter()).enumerate() {
             if gc == ac {
                 // its green
                 res += 2 * 3u32.pow(i as u32);
