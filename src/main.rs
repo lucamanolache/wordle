@@ -1,6 +1,6 @@
 use rayon::prelude::*;
+use std::fs;
 use std::sync::{Arc, Mutex};
-use std::{fs};
 use wordle::*;
 
 fn main() {
