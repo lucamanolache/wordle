@@ -1,6 +1,4 @@
-use rayon::prelude::*;
 use std::fs;
-use std::sync::{Arc, Mutex};
 use wordle::*;
 
 fn main() {
@@ -21,9 +19,8 @@ fn main() {
     let mut buffer = String::new();
 
     let mut guesses = contents.clone();
-    let mut answers = contents.clone();
     for _ in 0..6 {
-        let (guess, entropy) = calc_probs(&guesses, &answers);
+        let (guess, entropy) = calc_probs(&guesses);
         let disp = std::str::from_utf8(&guess).unwrap();
 
         println!(
@@ -36,7 +33,6 @@ fn main() {
         buffer.clear();
 
         mask_answers(mask, &guess, &mut guesses);
-        mask_answers(mask, &guess, &mut answers);
     }
 
     // let wins = Arc::new(Mutex::new([0; 7]));

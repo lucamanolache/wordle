@@ -8,10 +8,17 @@ pub fn criterion_benchmark(c: &mut Criterion) {
 
     let fp = "allowed_words.txt";
     let contents = fs::read_to_string(fp).expect("Should have been able to read the file");
-    let contents: Vec<&str> = contents.split('\n').collect();
-    g.bench_function("calc_probs", |b| {
-        b.iter(|| calc_probs(&contents, &contents))
-    });
+    let contents: Vec<[u8; 5]> = contents
+        .split('\n')
+        .filter_map(|s| {
+            if s.len() == 0 {
+                None
+            } else {
+                s.as_bytes().try_into().ok()
+            }
+        })
+        .collect();
+    g.bench_function("calc_probs", |b| b.iter(|| calc_probs(&contents)));
 }
 
 criterion_group!(benches, criterion_benchmark);
