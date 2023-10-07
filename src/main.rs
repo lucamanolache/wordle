@@ -1,26 +1,34 @@
+use serde::Deserialize;
 use std::fs;
 use wordle::*;
 
+#[derive(Debug, Deserialize)]
+struct Line {
+    probability: f32,
+    word: String,
+}
+
 fn main() {
     // read words
-    let fp = "allowed_words.txt";
-    let contents = fs::read_to_string(fp).expect("Should have been able to read the file");
-    let contents: Vec<[u8; 5]> = contents
-        .split('\n')
-        .filter_map(|s| {
-            if s.len() == 0 {
-                None
-            } else {
-                s.as_bytes().try_into().ok()
-            }
+    let mut rdr =
+        csv::Reader::from_path("freqs.csv").expect("Should have been able to read the file");
+    let contents: Vec<([u8; 5], f32)> = rdr
+        .deserialize()
+        .map(|res| -> ([u8; 5], f32) {
+            let record: Line = res.unwrap();
+
+            (
+                record.word.as_bytes().try_into().unwrap(),
+                record.probability,
+            )
         })
         .collect();
 
     let mut buffer = String::new();
-
     let mut guesses = contents.clone();
-    for _ in 0..6 {
-        let (guess, entropy) = calc_probs(&guesses);
+
+    for i in 0..6 {
+        let (guess, entropy) = calc_probs(&guesses, i);
         let disp = std::str::from_utf8(&guess).unwrap();
 
         println!(

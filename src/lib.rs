@@ -1,24 +1,27 @@
 use argminmax::ArgMinMax;
 use rayon::prelude::*;
 
-pub fn calc_probs(words: &Vec<[u8; 5]>) -> ([u8; 5], f32) {
+pub fn calc_probs(words: &Vec<([u8; 5], f32)>, trial: usize) -> ([u8; 5], f32) {
     // map of each guess to how many times it gets each key.
     // so bmap['soare'] = { 20002: 5, 10001: 3, ... }
-    let len = words.len() as f32;
+    let len: f32 = words.iter().map(|(_, prob)| -> f32 { *prob }).sum();
     let information: Vec<f32> = words
         .par_iter()
-        .map(|guess| -> f32 {
+        .map(|(guess, guess_prob)| -> f32 {
             let mut mask_counts = [0.0; 243];
-            let masks: Vec<usize> = words
+            let masks: Vec<(usize, f32)> = words
                 .par_iter() // big array so use parallism here
-                .map(|other_word| -> usize { gen_mask(guess, other_word) })
+                .map(|(other_word, other_prob)| -> (usize, f32) {
+                    // get the mask of the current guess we are processing and all other words
+                    (gen_mask(guess, other_word), *other_prob)
+                })
                 .collect();
-            for mask in masks {
+            for (mask, mask_prob) in masks {
                 // increase the amount of times we have seen this pattern
-                mask_counts[mask] += 1.0;
+                mask_counts[mask] += 1.0 * mask_prob;
             }
             // get the information from this
-            mask_counts
+            let mask_info: f32 = mask_counts
                 .iter() // array of 243 so no need to go parallel
                 .filter_map(|p| -> Option<f32> {
                     if *p == 0.0 {
@@ -30,12 +33,18 @@ pub fn calc_probs(words: &Vec<[u8; 5]>) -> ([u8; 5], f32) {
                         Some(p * -p.log2())
                     }
                 })
-                .sum()
+                .sum();
+            let _guess_prob = if trial != 0 {
+                guess_prob.powf(1.0 / (trial) as f32)
+            } else {
+                1.0
+            };
+            mask_info
         })
         .collect();
     // find what element has the best information
     let (_, argmax) = information.argminmax();
-    (words[argmax].clone(), information[argmax])
+    (words[argmax].0, information[argmax])
 }
 
 #[inline]
@@ -63,9 +72,9 @@ fn gen_mask(guess: &[u8; 5], ans: &[u8; 5]) -> usize {
     res
 }
 
-pub fn mask_answers(mask: u32, guess: &[u8; 5], answers: &mut Vec<[u8; 5]>) {
+pub fn mask_answers(mask: u32, guess: &[u8; 5], answers: &mut Vec<([u8; 5], f32)>) {
     for i in (0..answers.len() - 1).rev() {
-        let ans = answers[i];
+        let ans = answers[i].0;
         if ans.len() != 5 {
             continue;
         }

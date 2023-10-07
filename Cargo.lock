@@ -735,4 +735,5 @@ dependencies = [
  "criterion",
  "csv",
  "rayon",
+ "serde",
 ]
