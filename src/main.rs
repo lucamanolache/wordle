@@ -36,6 +36,16 @@ fn main() {
             disp, entropy
         );
 
+        if guesses.len() <= 10 {
+            println!(
+                "{:?}",
+                guesses
+                    .iter()
+                    .map(|s| -> String { s.0.iter().map(|x| { *x as char }).collect() })
+                    .collect::<Vec<String>>()
+            );
+        }
+
         std::io::stdin().read_line(&mut buffer).unwrap();
         let mask = make_mask(buffer.trim());
         buffer.clear();
